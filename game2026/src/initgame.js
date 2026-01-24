@@ -9,6 +9,7 @@ import OutsideScene from "./assets/scenes/OutsideScene";
 //import makeMentalHealthBar from "./ui/MentalHealthBar";
 //import startMentalDecay from "./systems/mentalDecay";
 import { socket } from "./assets/network/network.js";
+import {Zone} from "./assets/systems/Zone.js";
 
 function showChatBubble(k, target, text) {
   if (target.chatBubble) {
@@ -123,6 +124,7 @@ function clearRemotePlayers() {
 export default async function initGame() {
   const k = makeKaplayCtx();
 
+  
   // --- Load player sprite ---
   await k.loadSprite("player", "./sprites/player.png", {
     sliceX: 4,
@@ -290,6 +292,7 @@ socket.on("chat:message", ({ id, name, message }) => {
   }
 });
 
+const zone = new Zone() //ALICIA
 
 
      // --- When new players exist at start ---
@@ -400,7 +403,7 @@ k.scene("outside", () => {
     y: player.pos.y,
   });
 
-  currentPlayer = OutsideScene(k, player, otherPlayers);
+  currentPlayer = OutsideScene(k, player, otherPlayers, zone); //ALICIA
 
   Object.values(otherPlayers).forEach((remote) => {
     remote.scale = k.vec2(2);

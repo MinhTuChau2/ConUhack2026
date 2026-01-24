@@ -3,6 +3,7 @@ import { store, outfitAtom, environmentAtom, carDecayAtom , moneyAtom  } from ".
 import { PALETTE } from "../../constants";
 import { socket } from "../network/network.js";
 import makePlayer from "../entities/Player";
+import {Zone} from "../systems/Zone.js"; 
 
 const COIN_SCALE = 0.1;
 const WORLD_WIDTH = 1920;
@@ -13,6 +14,21 @@ let leavingScene = false;
 //const otherPlayers = {};
 
 
+// Initialize zone system
+function initializeZone(k) {
+  const gameZone = new Zone();
+  gameZone.initialize(WORLD_WIDTH, WORLD_HEIGHT);
+  return gameZone;
+}
+
+// Update and render zone system
+function updateZone(k, gameZone, player) {
+  gameZone.update(k.dt());
+  gameZone.render(k);
+  
+  // Simple status check
+  console.log("Player in zone:", gameZone.checkPlayerInZone(player.pos.x, player.pos.y));
+}
 
 export default function OutsideScene(k, player, otherPlayers) {
     for (const id in otherPlayers) {
@@ -21,6 +37,11 @@ export default function OutsideScene(k, player, otherPlayers) {
   }
   if (!player) return;
   leavingScene = false;
+  
+  // Create zone
+  const gameZone = initializeZone(k);
+  
+ 
 /*
   function spawnRemotePlayer(k, id, pos) {
   const remote = k.add([
@@ -447,6 +468,9 @@ for (const id in otherPlayers) {
   k.onUpdate(() => {
     const target = player.inCar ? player.car.pos : player.pos;
     k.camPos(k.camPos().lerp(target, 0.12));
+    
+    // Update zone system
+    updateZone(k, gameZone, player);
   });
 
   // ---------------------
