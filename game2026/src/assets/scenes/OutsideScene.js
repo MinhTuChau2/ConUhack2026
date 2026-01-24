@@ -1,5 +1,5 @@
 import makeCar from "../entities/Car";
-import { store, outfitAtom, environmentAtom, carDecayAtom , moneyAtom  } from "../../store";
+import { store, outfitAtom, carDecayAtom , moneyAtom  } from "../../store";
 import { PALETTE } from "../../constants";
 import { socket } from "../network/network.js";
 import makePlayer from "../entities/Player";

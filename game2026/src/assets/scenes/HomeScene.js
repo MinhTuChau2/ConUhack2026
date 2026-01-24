@@ -1,15 +1,15 @@
 import makePlayer from "../entities/Player";
 import { PALETTE } from "../../constants";
 import makeSection from "../components/Section";
-import { store, environmentAtom, mentalAtom, moneyAtom, dayAtom } from "../../store";
+import { store, moneyAtom, dayAtom } from "../../store";
 import { socket } from "../network/network.js";
 
-const OUTFIT_WEAR_TIME = {
-  outfit1: 600, // Handmade – 10 min
-  outfit2: 480, // Second-hand – 8 min
-  outfit3: 540, // Local brands – 9 min
-  outfit4: 180, // Fast fashion – 3 min (LOWEST)
-  outfit5: 420, // Vintage – 7 min
+const OUTFIT_DURABILITY = {
+  outfit1: 100, 
+  outfit2: 80, 
+  outfit3: 40, 
+  outfit4: 20, 
+  outfit5: 10, 
 };
 
 function wearOutfit(player, outfitId) {
@@ -25,10 +25,10 @@ function wearOutfit(player, outfitId) {
   // Default outfit has no wear timer
   if (outfitId === "none") return;
 
-  const wearTime = OUTFIT_WEAR_TIME[outfitId];
+  const wearTime = OUTFIT_DURABILITY[outfitId];
   if (!wearTime) return;
 
-  console.log(`👕 Wearing ${outfitId} for ${wearTime}s`);
+  console.log(` Wearing ${outfitId} for ${wearTime}s`);
 
   player.outfitTimer = setTimeout(() => {
     console.log(`⏳ ${outfitId} worn out → reverting to default`);
@@ -413,6 +413,35 @@ socket.emit("player:sceneChange", {
   y: currentPlayer.pos.y,
 });
 */
+
+  const BAR_WIDTH = 160;
+  const BAR_HEIGHT = 16;
+
+  const healthBg = k.add([
+    k.rect(BAR_WIDTH, BAR_HEIGHT),
+    k.pos(20, 20),
+    k.color(40, 40, 40),
+    k.fixed(),
+    k.z(9999),
+  ]);
+
+  const healthFill = k.add([
+    k.rect(BAR_WIDTH, BAR_HEIGHT),
+    k.pos(20, 20),
+    k.color(220, 60, 60),
+    k.fixed(),
+    k.z(10000),
+  ]);
+
+healthFill.onUpdate(() => {
+  if (player.health == null) return;
+  const ratio = player.health / 100; // assuming max 100
+  healthFill.width = BAR_WIDTH * k.clamp(ratio, 0, 1);
+});
+
+
+
+
 const onPlayerJoined = ({ id, pos, scene }) => {
   if (scene !== "home") return;
   if (id === socket.id) return;
@@ -582,10 +611,7 @@ else if (s.name === "ExitDoor") {
 });
 
 
-if (store.get(environmentAtom) <= 0) {
-  console.log("💀 Earth collapsed");
-  // k.go("gameover") later
-}
+
 
 
 player.onUpdate(() => {

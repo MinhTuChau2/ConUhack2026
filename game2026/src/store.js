@@ -1,11 +1,13 @@
 import { atom, createStore } from "jotai";
 
 
-export const environmentAtom = atom(1);
-export const mentalAtom = atom(0.5);
+//export const environmentAtom = atom(1);
+//export const mentalAtom = atom(0.5);
 export const moneyAtom = atom(0);
 export const dayAtom = atom(1);
-export const earthAtom = atom(1);
+//export const earthAtom = atom(1);
+
+export const healthAtom = atom(100);
 
 export const outfitAtom = atom("none");
 
