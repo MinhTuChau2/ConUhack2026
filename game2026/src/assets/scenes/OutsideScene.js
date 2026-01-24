@@ -255,6 +255,7 @@ coinText.onUpdate(() => {
   player.pos = k.vec2(WORLD_WIDTH / 2 - 800, WORLD_HEIGHT / 2 - 120);
   player.scale = k.vec2(2);
   k.add(player);
+  if (player.bindShooting) player.bindShooting();
 
   if (player.setBounds) player.setBounds(null);
 
