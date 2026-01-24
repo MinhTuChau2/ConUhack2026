@@ -34,6 +34,10 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
       hasMoved: false,
       currentScene: "outside",
       health: 100,
+      maxHealth: 100,
+      armor: 0,        // durability left
+      maxArmor: 100,
+     
     },
   ]);
   // ---------------------
@@ -125,15 +129,34 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   }
 
   player.healthBar = healthBar;
-  function damagePlayer(player, amount) {
-  player.health = Math.max(0, player.health - amount);
+ function damagePlayer(player, amount) {
+  let remaining = amount;
 
-  // Update atom if local
+  // Armor absorbs first
+  if (player.armor > 0) {
+    const absorbed = Math.min(player.armor, remaining);
+    player.armor -= absorbed;
+    remaining -= absorbed;
+  }
+
+  if (remaining > 0) {
+    player.health = Math.max(0, player.health - remaining);
+  }
+
   if (player.isLocal) {
-    store.set(healthAtom, player.health);
-    socket.emit("player:health", { value: player.health });
+    socket.emit("player:health", {
+      value: player.health,
+      armor: player.armor,
+    });
+  }
+
+  // Optional: auto-remove broken outfit
+  if (player.armor === 0 && player.currentOutfit !== "none") {
+    player.currentOutfit = "none";
+    player.changeOutfit("none");
   }
 }
+
 
 
   // ---------------------

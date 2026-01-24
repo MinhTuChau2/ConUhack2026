@@ -13,30 +13,25 @@ const OUTFIT_DURABILITY = {
 };
 
 function wearOutfit(player, outfitId) {
-  // Clear previous timer
-  if (player.outfitTimer) {
-    clearTimeout(player.outfitTimer);
-    player.outfitTimer = null;
-  }
-
   player.currentOutfit = outfitId;
   player.changeOutfit(outfitId);
 
-  // Default outfit has no wear timer
+  // Reset armor
+  player.armor = 0;
+  player.maxArmor = 0;
+
   if (outfitId === "none") return;
 
-  const wearTime = OUTFIT_DURABILITY[outfitId];
-  if (!wearTime) return;
+  const durability = OUTFIT_DURABILITY[outfitId] ?? 0;
 
-  console.log(` Wearing ${outfitId} for ${wearTime}s`);
+  player.armor = durability;
+  player.maxArmor = durability;
 
-  player.outfitTimer = setTimeout(() => {
-    console.log(`⏳ ${outfitId} worn out → reverting to default`);
-    player.currentOutfit = "none";
-    player.changeOutfit("none");
-    player.outfitTimer = null;
-  }, wearTime * 1000);
+  console.log(
+    `🛡️ ${outfitId} equipped → armor ${player.armor}/${player.maxArmor}`
+  );
 }
+
 
 
 function openClosetPopup(k, player) {
@@ -414,29 +409,44 @@ socket.emit("player:sceneChange", {
 });
 */
 
-  const BAR_WIDTH = 160;
-  const BAR_HEIGHT = 16;
+const BAR_WIDTH = 160;
+const BAR_HEIGHT = 16;
 
-  const healthBg = k.add([
-    k.rect(BAR_WIDTH, BAR_HEIGHT),
-    k.pos(20, 20),
-    k.color(40, 40, 40),
-    k.fixed(),
-    k.z(9999),
-  ]);
+const healthBg = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT),
+  k.pos(20, 20),
+  k.color(40, 40, 40),
+  k.fixed(),
+  k.z(9999),
+]);
 
-  const healthFill = k.add([
-    k.rect(BAR_WIDTH, BAR_HEIGHT),
-    k.pos(20, 20),
-    k.color(220, 60, 60),
-    k.fixed(),
-    k.z(10000),
-  ]);
+// ARMOR BAR (behind health)
+const armorFill = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT),
+  k.pos(20, 40),
+  k.color(80, 120, 220),
+  k.fixed(),
+  k.z(10000),
+]);
+
+// HEALTH BAR (front)
+const healthFill = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT),
+  k.pos(20, 20),
+  k.color(220, 60, 60),
+  k.fixed(),
+  k.z(10001),
+]);
 
 healthFill.onUpdate(() => {
   if (player.health == null) return;
-  const ratio = player.health / 100; // assuming max 100
-  healthFill.width = BAR_WIDTH * k.clamp(ratio, 0, 1);
+
+  const healthRatio = player.health / player.maxHealth;
+  const armorRatio =
+    player.maxArmor > 0 ? player.armor / player.maxArmor : 0;
+
+  armorFill.width = BAR_WIDTH * k.clamp(armorRatio, 0, 1);
+  healthFill.width = BAR_WIDTH * k.clamp(healthRatio, 0, 1);
 });
 
 

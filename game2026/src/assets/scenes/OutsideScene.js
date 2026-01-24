@@ -144,6 +144,48 @@ const OUTSIDE_WIDTH = 1920;
 const OUTSIDE_HEIGHT = 1080;
 
 
+  const BAR_WIDTH = 160;
+const BAR_HEIGHT = 16;
+
+const healthBg = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT),
+  k.pos(20, 20),
+  k.color(40, 40, 40),
+  k.fixed(),
+  k.z(9999),
+]);
+
+// ARMOR BAR (behind health)
+const armorFill = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT),
+  k.pos(20, 40),
+  k.color(80, 120, 220),
+  k.fixed(),
+  k.z(10000),
+]);
+
+// HEALTH BAR (front)
+const healthFill = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT),
+  k.pos(20, 20),
+  k.color(220, 60, 60),
+  k.fixed(),
+  k.z(10001),
+]);
+
+healthFill.onUpdate(() => {
+  if (player.health == null) return;
+
+  const healthRatio = player.health / player.maxHealth;
+  const armorRatio =
+    player.maxArmor > 0 ? player.armor / player.maxArmor : 0;
+
+  armorFill.width = BAR_WIDTH * k.clamp(armorRatio, 0, 1);
+  healthFill.width = BAR_WIDTH * k.clamp(healthRatio, 0, 1);
+});
+
+
+
 k.loadSprite("outsideBg", "./sprites/OUTSIDE.png", {
   sliceX: 2,
   sliceY: 1,
