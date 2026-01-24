@@ -130,12 +130,8 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
       lastShotTime = now;
 
       const aim = player.lastFacingDir.unit();
-<<<<<<< HEAD
       const bowWorldPos = player.bow.worldPos();
       const spawnPos = bowWorldPos.add(aim.scale(10));
-=======
-      const spawnPos = player.pos.add(aim.scale(15));
->>>>>>> e93ba7e309a7290d315c33beab3f78a5861067e4
 
       k.add([
         k.rect(12, 4),
@@ -143,10 +139,7 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
         k.pos(spawnPos),
         k.anchor("center"),
         k.area(),
-<<<<<<< HEAD
         k.rotate(aim.angle()),
-=======
->>>>>>> e93ba7e309a7290d315c33beab3f78a5861067e4
         k.move(aim, 800),
         k.offscreen({ destroy: true }),
         "bullet",
