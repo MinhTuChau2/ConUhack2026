@@ -1,5 +1,5 @@
-import { DIAGONAL_FACTOR, OUTFIT_DECAY_MODIFIER } from "../../constants";
-import { store, outfitAtom } from "../../store";
+import { DIAGONAL_FACTOR, OUTFIT_DECAY_MODIFIER } from "../../constants.js";
+import { store, outfitAtom } from "../../store.js";
 import { socket } from "../network/network.js";
 
 
@@ -31,6 +31,13 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
       hasMoved: false,
       currentScene: "outside",
     },
+  ]);
+  player.bow = player.add([
+    k.sprite("bow"),
+    k.scale(0.05),
+    k.anchor("center"),
+    k.pos(0,0),
+    k.z(5),
   ]);
 
   // ---------------------
@@ -79,6 +86,17 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   // ---------------------
   let isMouseDown = false;
   const game = document.getElementById("game");
+  const DIR_MAP = {
+    "walk-right": k.vec2(1, 0),
+    "walk-left": k.vec2(-1, 0),
+    "walk-up": k.vec2(0, -1),
+    "walk-down": k.vec2(0, 1),
+    "walk-right-up": k.vec2(0.7, -0.7),
+    "walk-right-down": k.vec2(0.7, 0.7),
+    "walk-left-up": k.vec2(-0.7, -0.7),
+    "walk-left-down": k.vec2(-0.7, 0.7),
+  };
+  player.lastFacingDir = DIR_MAP["walk-down"];
 
   const setMouseDown = (val) => (isMouseDown = val);
   ["mousedown", "touchstart"].forEach((evt) =>
@@ -87,6 +105,47 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   ["mouseup", "touchend", "focusout"].forEach((evt) =>
     game.addEventListener(evt, () => setMouseDown(false))
   );
+
+  // ---------------------
+  // SHOOTING (SCENE-BOUND)
+  // ---------------------
+  player.bindShooting = () => {
+    if (!player.isLocal) return;
+
+    const SHOT_COOLDOWN = 1 / 3;
+    let lastShotTime = -Infinity;
+
+    k.onKeyPress("space", () => {
+      if (player.inCloset || player.locked || player.hidden) {
+        console.log("[SHOOT] blocked", {
+          inCloset: player.inCloset,
+          locked: player.locked,
+          hidden: player.hidden,
+        });
+        return;
+      }
+
+      const now = k.time();
+      if (now - lastShotTime < SHOT_COOLDOWN) return;
+      lastShotTime = now;
+
+      const aim = player.lastFacingDir.unit();
+      const bowWorldPos = player.bow.worldPos();
+      const spawnPos = bowWorldPos.add(aim.scale(10));
+
+      k.add([
+        k.rect(12, 4),
+        k.color(255, 60, 60),
+        k.pos(spawnPos),
+        k.anchor("center"),
+        k.area(),
+        k.rotate(aim.angle()),
+        k.move(aim, 800),
+        k.offscreen({ destroy: true }),
+        "bullet",
+      ]);
+    });
+  };
 
   // ---------------------
   // UNLOCK / CLOSET CLICK
@@ -173,6 +232,9 @@ if (dx !== 0 || dy !== 0) {
     else if (dx > 0 && dy < -0.5) player.directionName = "walk-right-up";
     else if (dx > 0 && dy > 0.5) player.directionName = "walk-right-down";
 
+    const facingDir = DIR_MAP[player.directionName];
+    if (facingDir) player.lastFacingDir = facingDir;
+    
     if (player.direction.eq(k.vec2(0, 0))) {
       const idle = `${player.directionName}-idle`;
       if (!player.getCurAnim()?.name.includes("idle")) {
@@ -192,10 +254,15 @@ if (dx !== 0 || dy !== 0) {
     // CAMERA FOLLOW
     // ---------------------
     k.camPos(k.camPos().lerp(player.pos, CAMERA_LERP));
+    // Bow Follow
+    // -- Bow Follow --
+    if (player.bow) {
+      const dir = player.lastFacingDir;
+      player.bow.angle = dir.angle();
+    }
   });
 
-   // Movement input (only for local player)
-
+  // Movement input (only for local player)
   // Only the local player sends and receives socket updates
   if (isLocal) {
     player.onUpdate(() => {
