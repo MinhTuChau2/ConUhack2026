@@ -79,6 +79,17 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   // ---------------------
   let isMouseDown = false;
   const game = document.getElementById("game");
+  const DIR_MAP = {
+    "walk-right": k.vec2(1, 0),
+    "walk-left": k.vec2(-1, 0),
+    "walk-up": k.vec2(0, -1),
+    "walk-down": k.vec2(0, 1),
+    "walk-right-up": k.vec2(0.7, -0.7),
+    "walk-right-down": k.vec2(0.7, 0.7),
+    "walk-left-up": k.vec2(-0.7, -0.7),
+    "walk-left-down": k.vec2(-0.7, 0.7),
+  };
+  player.lastFacingDir = DIR_MAP["walk-down"];
 
   const setMouseDown = (val) => (isMouseDown = val);
   ["mousedown", "touchstart"].forEach((evt) =>
@@ -87,6 +98,45 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   ["mouseup", "touchend", "focusout"].forEach((evt) =>
     game.addEventListener(evt, () => setMouseDown(false))
   );
+
+  // ---------------------
+  // SHOOTING (SCENE-BOUND)
+  // ---------------------
+  player.bindShooting = () => {
+    if (!player.isLocal) return;
+
+    const SHOT_COOLDOWN = 1 / 3;
+    let lastShotTime = -Infinity;
+
+    k.onKeyPress("space", () => {
+      if (player.inCloset || player.locked || player.hidden) {
+        console.log("[SHOOT] blocked", {
+          inCloset: player.inCloset,
+          locked: player.locked,
+          hidden: player.hidden,
+        });
+        return;
+      }
+
+      const now = k.time();
+      if (now - lastShotTime < SHOT_COOLDOWN) return;
+      lastShotTime = now;
+
+      const aim = player.lastFacingDir.unit();
+      const spawnPos = player.pos.add(aim.scale(15));
+
+      k.add([
+        k.rect(12, 4),
+        k.color(255, 60, 60),
+        k.pos(spawnPos),
+        k.anchor("center"),
+        k.area(),
+        k.move(aim, 800),
+        k.offscreen({ destroy: true }),
+        "bullet",
+      ]);
+    });
+  };
 
   // ---------------------
   // UNLOCK / CLOSET CLICK
@@ -173,6 +223,9 @@ if (dx !== 0 || dy !== 0) {
     else if (dx > 0 && dy < -0.5) player.directionName = "walk-right-up";
     else if (dx > 0 && dy > 0.5) player.directionName = "walk-right-down";
 
+    const facingDir = DIR_MAP[player.directionName];
+    if (facingDir) player.lastFacingDir = facingDir;
+    
     if (player.direction.eq(k.vec2(0, 0))) {
       const idle = `${player.directionName}-idle`;
       if (!player.getCurAnim()?.name.includes("idle")) {
