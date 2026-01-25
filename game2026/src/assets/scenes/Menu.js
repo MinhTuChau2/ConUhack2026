@@ -45,54 +45,66 @@ export default function MenuScene(onSubmit) {
   background-image: url("./sprites/BG.png");
   background-repeat: no-repeat;
 
-  /* Two frames side-by-side */
+  /* 2 horizontal frames */
   background-size: 200% 100%;
-  background-position: 0% 0%; /* start on LEFT frame */
+  background-position: 0% 0%;
 
-  /* Hard frame switching */
+  /* Hard switch between frames */
   animation: bgAnim 1s steps(2) infinite;
 
-  /* Dark overlay */
+  /* Dark overlay for contrast */
   box-shadow: inset 0 0 0 1000px rgba(0,0,0,0.35);
 
+  /* Center everything like a game menu */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+
+  /* Pixelated effect */
+  image-rendering: pixelated;
 }
 
 /* LEFT → RIGHT frame */
 @keyframes bgAnim {
-  from { background-position: 0% 0%; }     /* frame 1 (left) */
-  to   { background-position: 200% 0%; }   /* frame 2 (right) */
+  from { background-position: 0% 0%; }   /* frame 1 (left) */
+  to   { background-position: 200% 0%; } /* frame 2 (right) */
 }
 
+/* Input box */
 .menu-input {
-  font-size: 24px;
-  padding: 12px;
+  font-family: "Press Start 2P", monospace; /* retro pixel font */
+  font-size: 16px;
+  padding: 10px;
   margin-bottom: 20px;
-  width: 300px;
-  border-radius: 8px;
-  border: none;
-  outline: none;
+  width: 260px;
+  border: 3px solid #fff; /* chunky border */
+  background-color: #222; /* dark background */
+  color: #fff;
   text-align: center;
+  outline: none;
+  box-shadow: 4px 4px 0 #000; /* retro 3D pixel shadow */
 }
 
+/* Button */
 .menu-button {
-  font-size: 24px;
-  padding: 12px 26px;
+  font-family: "Press Start 2P", monospace;
+  font-size: 16px;
+  padding: 10px 20px;
   cursor: pointer;
-  border-radius: 8px;
-  border: none;
-  background-color: #4CAF50;
+  border: 3px solid #fff;
+  background-color: #954caf;
   color: white;
-  transition: transform 0.15s ease, background-color 0.2s ease;
+  text-shadow: 2px 2px #000;
+  box-shadow: 4px 4px 0 #000;
+  transition: transform 0.1s steps(1), background-color 0.1s steps(1);
 }
 
+/* Button hover effect */
 .menu-button:hover {
-  background-color: #45a049;
-  transform: scale(1.05);
+  background-color: #4557a0;
+  transform: translate(-2px, -2px); /* chunky retro move */
 }
 
   `;
