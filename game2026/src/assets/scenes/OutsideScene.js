@@ -14,20 +14,34 @@ let leavingScene = false;
 //const otherPlayers = {};
 
 
-// Initialize zone system
+// Initialize zone system with server sync
+let gameZone = null;
+let zoneInitialized = false;
+
 function initializeZone(k) {
-  const gameZone = new Zone();
-  gameZone.initialize(WORLD_WIDTH, WORLD_HEIGHT);
+  if (!zoneInitialized) {
+    gameZone = new Zone();
+    zoneInitialized = true;
+  }
   return gameZone;
 }
 
-// Update and render zone system
-function updateZone(k, gameZone, player) {
-  gameZone.update(k.dt());
-  gameZone.render(k);
+// Update and render zone system from server data
+function updateZone(k, serverZoneData) {
+  if (!gameZone || !serverZoneData) return;
   
-  // Simple status check
-  console.log("Player in zone:", gameZone.checkPlayerInZone(player.pos.x, player.pos.y));
+  // Update zone with server data
+  gameZone.centerX = serverZoneData.centerX;
+  gameZone.centerY = serverZoneData.centerY;
+  gameZone.currentWidth = serverZoneData.currentWidth;
+  gameZone.currentHeight = serverZoneData.currentHeight;
+  gameZone.targetWidth = serverZoneData.targetWidth;
+  gameZone.targetHeight = serverZoneData.targetHeight;
+  gameZone.targetCenterX = serverZoneData.targetCenterX;
+  gameZone.targetCenterY = serverZoneData.targetCenterY;
+  gameZone.isActive = serverZoneData.isActive;
+  
+  gameZone.render(k);
 }
 
 export default function OutsideScene(k, player, otherPlayers) {
@@ -38,8 +52,14 @@ export default function OutsideScene(k, player, otherPlayers) {
   if (!player) return;
   leavingScene = false;
   
-  // Create zone
-  const gameZone = initializeZone(k);
+  // Initialize zone system
+  let serverZoneData = null;
+  initializeZone(k);
+  
+  // Listen for zone updates from server
+  socket.on("zone:update", (zoneData) => {
+    serverZoneData = zoneData;
+  });
   
  
 /*
@@ -469,8 +489,8 @@ for (const id in otherPlayers) {
     const target = player.inCar ? player.car.pos : player.pos;
     k.camPos(k.camPos().lerp(target, 0.12));
     
-    // Update zone system
-    updateZone(k, gameZone, player);
+    // Update zone system with server data
+    updateZone(k, serverZoneData);
   });
 
   // ---------------------

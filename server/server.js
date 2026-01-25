@@ -1,8 +1,13 @@
 import { Server } from "socket.io";
+import { Zone } from "./Zone.js";
 
 const io = new Server(3000, {
   cors: { origin: "*" },
 });
+
+// Initialize server-side zone
+const serverZone = new Zone();
+serverZone.initialize(1920, 1080);
 
 // Store players: { socketId: { name, pos } }
 const players = {};
@@ -179,4 +184,21 @@ socket.on("players:requestOutside", () => {
   });
 });
 
+// Zone update broadcasting (60 FPS)
+setInterval(() => {
+  serverZone.update(1/60); // 60 FPS delta time
+  io.emit("zone:update", {
+    centerX: serverZone.centerX,
+    centerY: serverZone.centerY,
+    currentWidth: serverZone.currentWidth,
+    currentHeight: serverZone.currentHeight,
+    targetWidth: serverZone.targetWidth,
+    targetHeight: serverZone.targetHeight,
+    targetCenterX: serverZone.targetCenterX,
+    targetCenterY: serverZone.targetCenterY,
+    isActive: serverZone.isActive
+  });
+}, 1000/60); // 60 FPS
+
 console.log("Socket.io server running on port 3000");
+console.log("Zone system initialized and broadcasting at 60 FPS");
