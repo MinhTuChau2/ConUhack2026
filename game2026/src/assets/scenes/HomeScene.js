@@ -1,4 +1,4 @@
-import makePlayer from "../entities/Player";
+import makePlayer from "../entities/Player.js";
 import { PALETTE } from "../../constants";
 import makeSection from "../components/Section";
 import { store, moneyAtom, dayAtom } from "../../store";

@@ -180,6 +180,13 @@ socket.on("players:requestOutside", () => {
   socket.emit("players:outsideList", outsidePlayers);
 });
 
+socket.on("player:shoot", (data) => {
+  io.emit("player:shoot", {
+    id: socket.id,
+    ...data,
+  });
+  console.log("Player : shot");
+});
 
   // --- Handle disconnect ---
   socket.on("disconnect", () => {
