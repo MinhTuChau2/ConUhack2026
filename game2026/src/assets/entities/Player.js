@@ -265,7 +265,7 @@ player.shootingBound = false;
 
     const SHOT_COOLDOWN = 1 / 3;
     let lastShotTime = -Infinity;
-
+    const arrowSound = new Audio("./sounds/arrow-swish.mp3");
     k.onKeyPress("space", () => {
       
   // ✅ Don't shoot if player is a ghost
@@ -288,7 +288,8 @@ player.shootingBound = false;
   const now = k.time();
   if (now - lastShotTime < SHOT_COOLDOWN) return;
   lastShotTime = now;
-
+ arrowSound.currentTime = 0; // restart sound if still playing
+  arrowSound.play();
   // Calculate spawn position in front of the player
   const aim = player.lastFacingDir.unit();
   const BOW_DISTANCE =45; // distance in front of player
@@ -321,11 +322,16 @@ socket.on("player:shoot", ({ x, y, dx, dy, angle }) => {
   // ----------------------------
   // Bullet collision with any player
   // ----------------------------
+  const hitSound = new Audio("./sounds/hit.mp3");
   bullet.onCollide("player", (playerHit) => {
     if (!playerHit || playerHit.health <= 0) return;
 
+    // Play hit sound
+  hitSound.currentTime = 0; // restart sound if still playing
+  hitSound.play();
+
     // Reduce HP by 10
-    damagePlayer(playerHit, 10);
+    damagePlayer(playerHit, 15);
 
     // Destroy bullet after hitting
     bullet.destroy();
