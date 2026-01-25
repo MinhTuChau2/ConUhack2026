@@ -1,7 +1,13 @@
 import { Server } from "socket.io";
+import { ElevenLabsClient } from "elevenlabs";
+import 'dotenv/config';
 
 const io = new Server(3000, {
   cors: { origin: "*" },
+});
+
+const elevenlabs = new ElevenLabsClient({
+  apiKey: process.env.ELEVENLABS_API_KEY,
 });
 
 // Store players: { socketId: { name, pos } }
@@ -16,17 +22,38 @@ io.on("connection", (socket) => {
      console.log("How many players on:", otherPlayerCount);
 
   // --- Handle chat messages ---
-  
-  socket.on("chat:message", (data) => {
-  // data = { name, message }
-  io.emit("chat:message", {
-    id: socket.id,
-    name: data.name,
-    message: data.message,
-  });
-});
+  socket.on("chat:message", async (data) => {
+    // 1. Broadcast text IMMEDIATELY for the visual bubble
+    io.emit("chat:message", { 
+      id: socket.id, 
+      name: data.name, 
+      message: data.message 
+    });
 
-     // --- Send all existing players to new client ---
+    try {
+      // 2. Start generating Rachel's voice
+      const audioStream = await elevenlabs.generate({
+        voice: "Rachel",
+        text: data.message,
+        model_id: "eleven_monolingual_v1"
+      });
+
+      // 3. Convert the audio stream into a Base64 string
+      const chunks = [];
+      for await (const chunk of audioStream) {
+        chunks.push(chunk);
+      }
+      const audioBuffer = Buffer.concat(chunks);
+      const base64Audio = audioBuffer.toString('base64');
+
+      // 4. Send the audio data to everyone
+      io.emit("chat:audio", { id: socket.id, audio: base64Audio });
+    } catch (err) {
+      console.error("ElevenLabs API Error:", err);
+    }
+  });
+
+  // --- Send all existing players to new client ---
   const existingPlayers = {};
   for (const [id, data] of Object.entries(players)) {
     if (id !== socket.id) existingPlayers[id] = data;
