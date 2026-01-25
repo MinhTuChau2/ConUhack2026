@@ -1,6 +1,5 @@
 import { Server } from "socket.io";
 import { ElevenLabsClient } from "elevenlabs";
-import 'dotenv/config';
 
 const io = new Server(3000, {
   cors: { origin: "*" },
