@@ -1,9 +1,9 @@
-import MenuScene from "./assets/scenes/Menu";
+import MenuScene from "./assets/scenes/Menu.js";
 import makePlayer from "./assets/entities/Player.js";
 import makeKaplayCtx from "./kaplayCTX.js";
-import { store, mentalAtom } from "./store";
-import HomeScene from "./assets/scenes/HomeScene";
-import OutsideScene from "./assets/scenes/OutsideScene";
+import { store, mentalAtom } from "./store.js";
+import HomeScene from "./assets/scenes/HomeScene.js";
+import OutsideScene from "./assets/scenes/OutsideScene.js";
 //import makeEarthHealthBar from "./assets/ui/EarthHealthBar";
 //import startEarthDecay from "./assets/systems/earthDecay";
 //import makeMentalHealthBar from "./ui/MentalHealthBar";
