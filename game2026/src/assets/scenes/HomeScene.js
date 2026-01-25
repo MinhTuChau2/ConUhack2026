@@ -1,42 +1,37 @@
 import makePlayer from "../entities/Player";
 import { PALETTE } from "../../constants";
 import makeSection from "../components/Section";
-import { store, environmentAtom, mentalAtom, moneyAtom, dayAtom } from "../../store";
+import { store, moneyAtom, dayAtom } from "../../store";
 import { socket } from "../network/network.js";
 
-const OUTFIT_WEAR_TIME = {
-  outfit1: 600, // Handmade – 10 min
-  outfit2: 480, // Second-hand – 8 min
-  outfit3: 540, // Local brands – 9 min
-  outfit4: 180, // Fast fashion – 3 min (LOWEST)
-  outfit5: 420, // Vintage – 7 min
+const OUTFIT_DURABILITY = {
+  outfit1: 100, 
+  outfit2: 80, 
+  outfit3: 40, 
+  outfit4: 20, 
+  outfit5: 10, 
 };
 
 function wearOutfit(player, outfitId) {
-  // Clear previous timer
-  if (player.outfitTimer) {
-    clearTimeout(player.outfitTimer);
-    player.outfitTimer = null;
-  }
-
   player.currentOutfit = outfitId;
   player.changeOutfit(outfitId);
 
-  // Default outfit has no wear timer
+  // Reset armor
+  player.armor = 0;
+  player.maxArmor = 0;
+
   if (outfitId === "none") return;
 
-  const wearTime = OUTFIT_WEAR_TIME[outfitId];
-  if (!wearTime) return;
+  const durability = OUTFIT_DURABILITY[outfitId] ?? 0;
 
-  console.log(`👕 Wearing ${outfitId} for ${wearTime}s`);
+  player.armor = durability;
+  player.maxArmor = durability;
 
-  player.outfitTimer = setTimeout(() => {
-    console.log(`⏳ ${outfitId} worn out → reverting to default`);
-    player.currentOutfit = "none";
-    player.changeOutfit("none");
-    player.outfitTimer = null;
-  }, wearTime * 1000);
+  console.log(
+    `🛡️ ${outfitId} equipped → armor ${player.armor}/${player.maxArmor}`
+  );
 }
+
 
 
 function openClosetPopup(k, player) {
@@ -413,6 +408,50 @@ socket.emit("player:sceneChange", {
   y: currentPlayer.pos.y,
 });
 */
+
+const BAR_WIDTH = 160;
+const BAR_HEIGHT = 16;
+
+const healthBg = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT),
+  k.pos(20, 20),
+  k.color(40, 40, 40),
+  k.fixed(),
+  k.z(9999),
+]);
+
+// ARMOR BAR (behind health)
+const armorFill = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT),
+  k.pos(20, 40),
+  k.color(80, 120, 220),
+  k.fixed(),
+  k.z(10000),
+]);
+
+// HEALTH BAR (front)
+const healthFill = k.add([
+  k.rect(BAR_WIDTH, BAR_HEIGHT),
+  k.pos(20, 20),
+  k.color(220, 60, 60),
+  k.fixed(),
+  k.z(10001),
+]);
+
+healthFill.onUpdate(() => {
+  if (player.health == null) return;
+
+  const healthRatio = player.health / player.maxHealth;
+  const armorRatio =
+    player.maxArmor > 0 ? player.armor / player.maxArmor : 0;
+
+  armorFill.width = BAR_WIDTH * k.clamp(armorRatio, 0, 1);
+  healthFill.width = BAR_WIDTH * k.clamp(healthRatio, 0, 1);
+});
+
+
+
+
 const onPlayerJoined = ({ id, pos, scene }) => {
   if (scene !== "home") return;
   if (id === socket.id) return;
@@ -582,10 +621,7 @@ else if (s.name === "ExitDoor") {
 });
 
 
-if (store.get(environmentAtom) <= 0) {
-  console.log("💀 Earth collapsed");
-  // k.go("gameover") later
-}
+
 
 
 player.onUpdate(() => {

@@ -1,6 +1,8 @@
 import { DIAGONAL_FACTOR, OUTFIT_DECAY_MODIFIER } from "../../constants";
-import { store, outfitAtom } from "../../store";
+import { store, outfitAtom, healthAtom  } from "../../store";
 import { socket } from "../network/network.js";
+import makeHealth from "../systems/Health";
+import makeHealthBar from "../ui/HealthBar";
 
 
 export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlayers = {}) {
@@ -14,6 +16,7 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
     k.anchor("center"),
     k.area({ shape: new k.Rect(k.vec2(0), 5, 10), solid: true }), // solid for collision
     k.body({ isStatic: false }),
+    
     isLocal ? "localPlayer" : "remotePlayer",
     k.pos(posVec2),
     "player",
@@ -30,8 +33,131 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
       currentOutfitId: "none",
       hasMoved: false,
       currentScene: "outside",
+      health: 100,
+      maxHealth: 100,
+      armor: 0,        // durability left
+      maxArmor: 100,
+     
     },
   ]);
+  // ---------------------
+// PLAYER vs PLAYER DAMAGE
+// ---------------------
+
+// Only the LOCAL player handles collision damage
+
+  player.onCollide("remotePlayer", (other) => {
+    // Prevent rapid-fire damage every frame
+    if (player._lastHit && k.time() - player._lastHit < 1) return;
+    player._lastHit = k.time();
+
+    // Damage BOTH players
+    damagePlayer(player, 10);
+
+
+  });
+
+
+
+  // -------------------------
+  // LOCAL PLAYER UI HEALTH BAR
+  // -------------------------
+  let healthBar = null;
+
+  if (isLocal) {
+    const BAR_WIDTH = 160;
+    const BAR_HEIGHT = 16;
+
+    // Health bar background
+    const bg = k.add([
+      k.rect(BAR_WIDTH, BAR_HEIGHT),
+      k.pos(20, 20),
+      k.color(40, 40, 40),
+      k.fixed(),
+      k.z(9999),
+    ]);
+
+    // Health bar foreground
+    const fill = k.add([
+      k.rect(BAR_WIDTH, BAR_HEIGHT),
+      k.pos(20, 20),
+      k.color(220, 60, 60),
+      k.fixed(),
+      k.z(10000),
+    ]);
+
+    healthBar = { bg, fill };
+
+    // Update health bar every frame
+    player.onUpdate(() => {
+      const ratio = player.health / 100; // assuming max 100
+      fill.width = Math.max(0, BAR_WIDTH * ratio);
+    });
+
+    // Sync health with the atom
+    store.set(healthAtom, player.health);
+    console.log("Local player health:", player.health);
+  }
+
+  // -------------------------
+  // REMOTE PLAYER HEALTH BAR (above sprite)
+  // -------------------------
+  if (!isLocal) {
+    const BAR_WIDTH = 40;
+    const BAR_HEIGHT = 5;
+
+    const bg = k.add([
+      k.rect(BAR_WIDTH, BAR_HEIGHT),
+      k.color(40, 40, 40),
+      k.anchor("center"),
+      k.pos(player.pos.x, player.pos.y - 20), // above sprite
+    ]);
+
+    const fill = k.add([
+      k.rect(BAR_WIDTH, BAR_HEIGHT),
+      k.color(220, 60, 60),
+      k.anchor("center"),
+      k.pos(player.pos.x, player.pos.y - 20),
+    ]);
+
+    healthBar = { bg, fill };
+
+    player.onUpdate(() => {
+      fill.width = Math.max(0, BAR_WIDTH * (player.health / 100));
+      bg.pos = fill.pos = k.vec2(player.pos.x, player.pos.y - 20);
+    });
+  }
+
+  player.healthBar = healthBar;
+ function damagePlayer(player, amount) {
+  let remaining = amount;
+
+  // Armor absorbs first
+  if (player.armor > 0) {
+    const absorbed = Math.min(player.armor, remaining);
+    player.armor -= absorbed;
+    remaining -= absorbed;
+  }
+
+  if (remaining > 0) {
+    player.health = Math.max(0, player.health - remaining);
+  }
+
+  if (player.isLocal) {
+    socket.emit("player:health", {
+      value: player.health,
+      armor: player.armor,
+    });
+  }
+
+  // Optional: auto-remove broken outfit
+  if (player.armor === 0 && player.currentOutfit !== "none") {
+    player.currentOutfit = "none";
+    player.changeOutfit("none");
+  }
+}
+
+
 
   // ---------------------
   // WORLD BOUNDS
@@ -198,6 +324,7 @@ if (dx !== 0 || dy !== 0) {
 
   // Only the local player sends and receives socket updates
   if (isLocal) {
+    
     player.onUpdate(() => {
       if (player.hasMoved) {
         socket.emit("player:move", {
@@ -207,7 +334,20 @@ if (dx !== 0 || dy !== 0) {
         });
         player.hasMoved = false;
       }
-    });
+      
+});
+socket.on("player:health", ({ id, value }) => {
+  if (id === socket.id) return;
+
+  const other = otherPlayers[id];
+  if (other) {
+    other.health = value;
+    if (other.healthBar) {
+      const ratio = other.health / 100;
+      other.healthBar.fill.width = Math.max(0, 40 * ratio); // 40 = bar width
+    }
+  }
+});
 
     socket.on("player:update", ({ id, x, y, scene }) => {
       if (id === socket.id) return; // ignore self
@@ -217,7 +357,10 @@ if (dx !== 0 || dy !== 0) {
         other.pos = { x, y };
       } else {
         // Create remote player
-        otherPlayers[id] = makePlayer(k, { x, y }, speed, false, otherPlayers);
+        const remote = makePlayer(k, { x, y }, speed, false, otherPlayers);
+        remote.playerId = id;
+        otherPlayers[id] = remote;
+
       }
     });
   }

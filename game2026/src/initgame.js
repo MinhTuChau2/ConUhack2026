@@ -1,7 +1,7 @@
 import MenuScene from "./assets/scenes/Menu";
 import makePlayer from "./assets/entities/Player";
 import makeKaplayCtx from "./kaplayCTX.js";
-import { store, mentalAtom } from "./store";
+import { store } from "./store";
 import HomeScene from "./assets/scenes/HomeScene";
 import OutsideScene from "./assets/scenes/OutsideScene";
 //import makeEarthHealthBar from "./assets/ui/EarthHealthBar";
@@ -10,6 +10,8 @@ import OutsideScene from "./assets/scenes/OutsideScene";
 //import startMentalDecay from "./systems/mentalDecay";
 import { socket } from "./assets/network/network.js";
 import {Zone} from "./assets/systems/Zone.js";
+import makeHealth from "./assets/systems/Health";
+//import makeHealthBar from "./assets/ui/HealthBar";
 
 function showChatBubble(k, target, text) {
   if (target.chatBubble) {
@@ -269,10 +271,10 @@ socket.on("chat:message", ({ id, name, message }) => {
   // --- Show menu and create local player ---
   MenuScene((playerName) => {
     console.log("Player name received:", playerName);
-
+    
     const player = makePlayer(k, k.vec2(960, 540), 700, true, otherPlayers);
     currentPlayer = player;
-
+   
  chatInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && chatInput.value.trim() !== "") {
     const message = chatInput.value.trim();
@@ -292,6 +294,7 @@ socket.on("chat:message", ({ id, name, message }) => {
   }
 });
 
+<<<<<<< HEAD
 const zone = new Zone() //ALICIA
 
 
@@ -324,6 +327,9 @@ const zone = new Zone() //ALICIA
   });
 
   */
+=======
+ 
+>>>>>>> origin/main
  socket.on("player:moved", ({ id, x, y }) => {
   const remote = otherPlayers[id];
   if (!remote) return;
@@ -354,29 +360,8 @@ const zone = new Zone() //ALICIA
     remote.play(idleAnim);
     remote.directionName = facing;
   }
+
 }); 
-/*
-  // --- When a player leaves ---
-  socket.on("player:left", (id) => {
-    const remote = otherPlayers[id];
-    if (remote) {
-      remote.destroy();
-      delete otherPlayers[id];
-      otherPlayersCount = Math.max(0, otherPlayersCount - 1);
-      indicator.style.backgroundColor =
-        otherPlayersCount > 0 ? "green" : "red";
-      indicator.textContent = otherPlayersCount;
-    }
-      
-  });
-    */
-    //startEarthDecay(() => currentPlayer);
-    //startMentalDecay();
-
-    //makeMentalHealthBar(k);
-    //makeEarthHealthBar(k);
-
-   // Inside initGame:
 
 k.scene("home", () => {
   currentRemoteScale = 5;
