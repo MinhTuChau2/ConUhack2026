@@ -294,43 +294,9 @@ socket.on("chat:message", ({ id, name, message }) => {
   }
 });
 
-<<<<<<< HEAD
-const zone = new Zone() //ALICIA
+const zone = new Zone(); // Zone creation for the game
 
-
-     // --- When new players exist at start ---
-  /*
-     socket.on("players:init", (playersList) => {
-  const count = Object.keys(playersList).length;
-
-  otherPlayersCount = count;
-  indicator.style.backgroundColor = count > 0 ? "green" : "red";
-  indicator.textContent = count;
-
-  for (const [id, data] of Object.entries(playersList)) {
-    if (id === socket.id) continue;
-    if (!otherPlayers[id]) {
-      spawnRemotePlayer(k, id, data.pos);
-    }
-  }
-});
-
-
-  // --- When a new player joins ---
-  socket.on("player:joined", ({ id, pos }) => {
-    if (id === socket.id) return;
-    otherPlayersCount++;
-    indicator.style.backgroundColor = "green";
-    indicator.textContent = otherPlayersCount;
-
-    if (!otherPlayers[id]) spawnRemotePlayer(k, id, pos);
-  });
-
-  */
-=======
- 
->>>>>>> origin/main
- socket.on("player:moved", ({ id, x, y }) => {
+socket.on("player:moved", ({ id, x, y }) => {
   const remote = otherPlayers[id];
   if (!remote) return;
 
