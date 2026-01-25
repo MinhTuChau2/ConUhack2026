@@ -7,7 +7,7 @@ const io = new Server(3000, {
 });
 
 const elevenlabs = new ElevenLabsClient({
-  apiKey: process.env.ELEVENLABS_API_KEY,
+  apiKey: "sk_0df9b0d131474de2c86618ea7951e780b572daa8bb74f1fb",
 });
 
 // Store players: { socketId: { name, pos } }
