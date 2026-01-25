@@ -10,6 +10,7 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   // PLAYER ENTITY
   // ---------------------
 
+
   const player = k.add([
     k.sprite("player", { anim: "walk-down-idle" }),
     k.scale(5),
@@ -43,7 +44,7 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   // ---------------------
 // PLAYER vs PLAYER DAMAGE
 // ---------------------
-
+player.shootingBound = false;
 // Only the LOCAL player handles collision damage
 
   player.onCollide("remotePlayer", (other) => {
@@ -205,6 +206,17 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   // ---------------------
   let isMouseDown = false;
   const game = document.getElementById("game");
+  const DIR_MAP = {
+    "walk-right": k.vec2(1, 0),
+    "walk-left": k.vec2(-1, 0),
+    "walk-up": k.vec2(0, -1),
+    "walk-down": k.vec2(0, 1),
+    "walk-right-up": k.vec2(0.7, -0.7),
+    "walk-right-down": k.vec2(0.7, 0.7),
+    "walk-left-up": k.vec2(-0.7, -0.7),
+    "walk-left-down": k.vec2(-0.7, 0.7),
+  };
+  player.lastFacingDir = DIR_MAP["walk-down"];
 
   const setMouseDown = (val) => (isMouseDown = val);
   ["mousedown", "touchstart"].forEach((evt) =>
@@ -213,6 +225,87 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   ["mouseup", "touchend", "focusout"].forEach((evt) =>
     game.addEventListener(evt, () => setMouseDown(false))
   );
+
+  // ---------------------
+  // SHOOTING (SCENE-BOUND)
+  // ---------------------
+  player.bindShooting = () => {
+    if (!player.isLocal) return;
+    if (player.shootingBound) return; // 🔒 prevent re-binding
+  player.shootingBound = true;
+
+    const SHOT_COOLDOWN = 1 / 3;
+    let lastShotTime = -Infinity;
+
+    k.onKeyPress("space", () => {
+      if (player.inCloset || player.locked || player.hidden) {
+        console.log("[SHOOT] blocked", {
+          inCloset: player.inCloset,
+          locked: player.locked,
+          hidden: player.hidden,
+        });
+        return;
+      }
+
+      const now = k.time();
+      if (now - lastShotTime < SHOT_COOLDOWN) return;
+      lastShotTime = now;
+
+      // inside bindShooting (LOCAL ONLY)
+        const aim = player.lastFacingDir.unit();
+        if (!player.bow) return;
+
+        const bowWorldPos = player.bow.worldPos();
+        const spawnPos = bowWorldPos.add(aim.scale(10));
+
+        socket.emit("player:shoot", {
+        x: spawnPos.x,
+        y: spawnPos.y,
+        dx: aim.x,
+        dy: aim.y,
+        angle: aim.angle(),
+});
+
+
+    });
+  };
+socket.on("player:shoot", ({ x, y, dx, dy, angle }) => {
+  k.add([
+    k.rect(12, 4),
+    k.color(255, 60, 60),
+    k.pos(x, y),
+    k.anchor("center"),
+    k.area(),
+    k.body(),
+    k.rotate(angle),
+    k.move(k.vec2(dx, dy), 800),
+    k.offscreen({ destroy: true }),
+    "bullet",
+  ]);
+  // BULLET → PLAYER DAMAGE
+ bullet.onCollide("player", (player) => {
+  // Only damage REMOTE players
+  if (player.isLocal) return;
+  if (player.health <= 0) return;
+
+  damagePlayer(player, 10); // 💥 -10 HP
+  bullet.destroy();
+});
+
+});
+
+  // ---------------------
+// BOW (LOCAL PLAYER ONLY)
+// ---------------------
+
+  player.bow = player.add([
+    k.sprite("bow"),          // make sure this sprite is loaded
+    k.anchor("center"),
+    k.pos(8, 0), 
+    k.scale(0.05),             // offset from player center
+    k.z(5),
+  ]);
+
 
   // ---------------------
   // UNLOCK / CLOSET CLICK
@@ -299,6 +392,9 @@ if (dx !== 0 || dy !== 0) {
     else if (dx > 0 && dy < -0.5) player.directionName = "walk-right-up";
     else if (dx > 0 && dy > 0.5) player.directionName = "walk-right-down";
 
+    const facingDir = DIR_MAP[player.directionName];
+    if (facingDir) player.lastFacingDir = facingDir;
+    
     if (player.direction.eq(k.vec2(0, 0))) {
       const idle = `${player.directionName}-idle`;
       if (!player.getCurAnim()?.name.includes("idle")) {
@@ -318,10 +414,15 @@ if (dx !== 0 || dy !== 0) {
     // CAMERA FOLLOW
     // ---------------------
     k.camPos(k.camPos().lerp(player.pos, CAMERA_LERP));
+    // Bow Follow
+    // -- Bow Follow --
+    if (player.bow) {
+      const dir = player.lastFacingDir;
+      player.bow.angle = dir.angle();
+    }
   });
 
-   // Movement input (only for local player)
-
+  // Movement input (only for local player)
   // Only the local player sends and receives socket updates
   if (isLocal) {
     

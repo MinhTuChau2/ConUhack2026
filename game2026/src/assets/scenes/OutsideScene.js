@@ -2,7 +2,7 @@ import makeCar from "../entities/Car";
 import { store, outfitAtom, carDecayAtom , moneyAtom  } from "../../store";
 import { PALETTE } from "../../constants";
 import { socket } from "../network/network.js";
-import makePlayer from "../entities/Player";
+import makePlayer from "../entities/Player.js";
 
 const COIN_SCALE = 0.1;
 const WORLD_WIDTH = 1920;
@@ -297,6 +297,7 @@ coinText.onUpdate(() => {
   player.pos = k.vec2(WORLD_WIDTH / 2 - 800, WORLD_HEIGHT / 2 - 120);
   player.scale = k.vec2(2);
   k.add(player);
+  if (player.bindShooting) player.bindShooting();
 
   if (player.setBounds) player.setBounds(null);
 

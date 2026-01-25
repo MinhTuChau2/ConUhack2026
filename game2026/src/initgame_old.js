@@ -1,5 +1,5 @@
 import MenuScene from "./assets/scenes/Menu";
-import makePlayer from "./assets/entities/Player";
+import makePlayer from "./assets/entities/Player.js";
 import makeKaplayCtx from "./kaplayCTX.js";
 import { store } from "./store";
 import HomeScene from "./assets/scenes/HomeScene";
@@ -148,6 +148,7 @@ export default async function initGame() {
       "walk-right-down-idle": 28,
     },
   });
+  await k.loadSprite("bow", "./sprites/Bow-and-arrow.png");
 
   // --- Indicator for other players ---
   const indicator = document.createElement("div");
