@@ -10,7 +10,6 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
   // PLAYER ENTITY
   // ---------------------
 
-
   const player = k.add([
     k.sprite("player", { anim: "walk-down-idle" }),
     k.scale(5),
@@ -41,6 +40,27 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
      
     },
   ]);
+
+  function checkGhost() {
+  if (player.health <= 0 && !player.isGhost) {
+    player.isGhost = true;
+
+    // Make ghost
+    player.opacity = 0.67;
+
+    // Disable collisions
+    if (player.area) player.area.solid = false;
+
+    // Hide bow
+    if (player.bow) player.bow.hidden = true;
+
+    // Fade outfit too
+    if (player.outfit) player.outfit.opacity = 0.67;
+
+    console.log(`${player.isLocal ? "Local" : "Remote"} player is now a ghost`);
+  }
+}
+
   // ---------------------
 // PLAYER vs PLAYER DAMAGE
 // ---------------------
@@ -65,7 +85,7 @@ player.shootingBound = false;
   // -------------------------
   let healthBar = null;
 
-  if (isLocal) {
+  if (isLocal) checkGhost();{
     const BAR_WIDTH = 160;
     const BAR_HEIGHT = 16;
 
@@ -104,6 +124,7 @@ player.shootingBound = false;
   // REMOTE PLAYER HEALTH BAR (above sprite)
   // -------------------------
   if (!isLocal) {
+    
     const BAR_WIDTH = 40;
     const BAR_HEIGHT = 5;
 
@@ -142,14 +163,19 @@ player.shootingBound = false;
 
   if (remaining > 0) {
     player.health = Math.max(0, player.health - remaining);
+     // ✅ Immediately check ghost status
+  if (player.isLocal) checkGhost();
   }
 
-  if (player.isLocal) {
-    socket.emit("player:health", {
-      value: player.health,
-      armor: player.armor,
-    });
-  }
+  // Emit health update for local player
+  if (player.isLocal && player.health <= 0) {
+  socket.emit("player:health", {
+     id: socket.id,
+    value: player.health,
+    armor: player.armor,
+    isGhost: true
+  });
+}
 
   // Optional: auto-remove broken outfit
   if (player.armor === 0 && player.currentOutfit !== "none") {
@@ -157,6 +183,8 @@ player.shootingBound = false;
     player.changeOutfit("none");
   }
 }
+
+
 
 
 
@@ -238,39 +266,43 @@ player.shootingBound = false;
     let lastShotTime = -Infinity;
 
     k.onKeyPress("space", () => {
-      if (player.inCloset || player.locked || player.hidden) {
-        console.log("[SHOOT] blocked", {
-          inCloset: player.inCloset,
-          locked: player.locked,
-          hidden: player.hidden,
-        });
-        return;
-      }
+  // ✅ Don't shoot if player is a ghost
+  if (player.isGhost) {
+    console.log("[SHOOT] blocked: player is a ghost");
+    return;
+  }
 
-      const now = k.time();
-      if (now - lastShotTime < SHOT_COOLDOWN) return;
-      lastShotTime = now;
-
-      // inside bindShooting (LOCAL ONLY)
-        const aim = player.lastFacingDir.unit();
-        if (!player.bow) return;
-
-        const bowWorldPos = player.bow.worldPos();
-        const spawnPos = bowWorldPos.add(aim.scale(10));
-
-        socket.emit("player:shoot", {
-        x: spawnPos.x,
-        y: spawnPos.y,
-        dx: aim.x,
-        dy: aim.y,
-        angle: aim.angle(),
-});
-
-
+  // Don't shoot if in closet, locked, or hidden
+  if (player.inCloset || player.locked || player.hidden) {
+    console.log("[SHOOT] blocked", {
+      inCloset: player.inCloset,
+      locked: player.locked,
+      hidden: player.hidden,
     });
-  };
+    return;
+  }
+
+  const now = k.time();
+  if (now - lastShotTime < SHOT_COOLDOWN) return;
+  lastShotTime = now;
+
+  // Calculate spawn position in front of the player
+  const aim = player.lastFacingDir.unit();
+  const BOW_DISTANCE =33; // distance in front of player
+  const spawnPos = player.pos.add(aim.scale(BOW_DISTANCE));
+
+  socket.emit("player:shoot", {
+    x: spawnPos.x,
+    y: spawnPos.y,
+    dx: aim.x,
+    dy: aim.y,
+    angle: aim.angle(),
+  });
+});
+};
+
 socket.on("player:shoot", ({ x, y, dx, dy, angle }) => {
-  k.add([
+  const bullet = k.add([
     k.rect(12, 4),
     k.color(255, 60, 60),
     k.pos(x, y),
@@ -282,30 +314,49 @@ socket.on("player:shoot", ({ x, y, dx, dy, angle }) => {
     k.offscreen({ destroy: true }),
     "bullet",
   ]);
-  // BULLET → PLAYER DAMAGE
- bullet.onCollide("player", (player) => {
-  // Only damage REMOTE players
-  if (player.isLocal) return;
-  if (player.health <= 0) return;
 
-  damagePlayer(player, 10); // 💥 -10 HP
-  bullet.destroy();
+  // ----------------------------
+  // Bullet collision with any player
+  // ----------------------------
+  bullet.onCollide("player", (playerHit) => {
+    if (!playerHit || playerHit.health <= 0) return;
+
+    // Reduce HP by 10
+    damagePlayer(playerHit, 10);
+
+    // Destroy bullet after hitting
+    bullet.destroy();
+  });
 });
 
-});
+
 
   // ---------------------
 // BOW (LOCAL PLAYER ONLY)
 // ---------------------
 
-  player.bow = player.add([
-    k.sprite("bow"),          // make sure this sprite is loaded
+  // Bow setup
+player.bow = player.add([
+    k.sprite("bow"),
     k.anchor("center"),
-    k.pos(8, 0), 
-    k.scale(0.05),             // offset from player center
+    k.scale(0.05),
     k.z(5),
-  ]);
+]);
 
+const BOW_DISTANCE = 20; // distance in front of player
+
+player.onUpdate(() => {
+    if (!player.bow) return;
+
+    // Direction player is facing
+    const dir = player.lastFacingDir.unit();
+
+    // Update bow position relative to player
+    player.bow.pos = dir.scale(BOW_DISTANCE);
+
+    // Rotate bow to face direction
+    player.bow.angle = dir.angle();
+});
 
   // ---------------------
   // UNLOCK / CLOSET CLICK
@@ -427,6 +478,8 @@ if (dx !== 0 || dy !== 0) {
   if (isLocal) {
     
     player.onUpdate(() => {
+         if (player.isLocal) {
+    checkGhost();
       if (player.hasMoved) {
         socket.emit("player:move", {
           x: player.pos.x,
@@ -435,20 +488,41 @@ if (dx !== 0 || dy !== 0) {
         });
         player.hasMoved = false;
       }
-      
+    }
 });
-socket.on("player:health", ({ id, value }) => {
+
+
+
+
+socket.on("player:health", ({ id, value, isGhost }) => {
   if (id === socket.id) return;
 
   const other = otherPlayers[id];
   if (other) {
     other.health = value;
+
+    // Update health bar
     if (other.healthBar) {
       const ratio = other.health / 100;
-      other.healthBar.fill.width = Math.max(0, 40 * ratio); // 40 = bar width
+      other.healthBar.fill.width = Math.max(0, 40 * ratio);
+    }
+
+    // Apply ghost if needed
+    if (isGhost && !other.isGhost) {
+      // Reuse the checkGhost logic for remote players
+      other.isGhost = true;
+      other.opacity = 0.67;
+
+      if (other.area) other.area.solid = false;
+      if (other.bow) other.bow.hidden = true;
+      if (other.outfit) other.outfit.opacity = 0.67;
+
+      console.log("Remote player became a ghost", id);
     }
   }
 });
+
+
 
     socket.on("player:update", ({ id, x, y, scene }) => {
       if (id === socket.id) return; // ignore self

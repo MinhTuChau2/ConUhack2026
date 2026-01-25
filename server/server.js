@@ -27,13 +27,16 @@ io.on("connection", (socket) => {
 });
 
 
-socket.on("player:health", ({ value }) => {
+socket.on("player:health", ({ value, armor, isGhost }) => {
   // broadcast to everyone except sender
   socket.broadcast.emit("player:health", {
     id: socket.id,
     value,
+    armor,
+    isGhost,
   });
 });
+
 
      // --- Send all existing players to new client ---
   const existingPlayers = {};
