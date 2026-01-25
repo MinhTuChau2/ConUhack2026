@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import initGame from "./initgame_old";
+import initGame from "./initgame";
 import ReactUi from "./reactUi";
 import { store } from "./store";
 import { Provider } from "jotai";
