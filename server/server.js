@@ -89,7 +89,7 @@ socket.on("player:ready", () => {
       const audioStream = await elevenlabs.generate({
         voice: "NOpBlnGInO9m6vDvFkFC",
         text: data.message,
-        model_id: "eleven_monolingual_v1"
+        model_id: "eleven_turbo_v2_5"
       });
 
       // 3. Convert the audio stream into a Base64 string
