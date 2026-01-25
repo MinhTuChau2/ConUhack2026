@@ -26,6 +26,8 @@
 
 ---
 
+
+
 ## ▶️ How to Run
 
 ### Requirements
@@ -40,4 +42,5 @@ cd ConUhack2026
 cd game2026
 npm install
 npm run dev
+
 
