@@ -11,6 +11,14 @@ const WORLD_HEIGHT = 1080;
 const coinRespawnTimers = new Set();
 let leavingScene = false;
 //const otherPlayers = {};
+const OUTSIDE_SPAWN_MARGIN = 200;
+
+function getRandomOutsideSpawn(k) {
+  return k.vec2(
+    k.rand(OUTSIDE_SPAWN_MARGIN, WORLD_WIDTH - OUTSIDE_SPAWN_MARGIN),
+    k.rand(OUTSIDE_SPAWN_MARGIN, WORLD_HEIGHT - OUTSIDE_SPAWN_MARGIN)
+  );
+}
 
 
 
@@ -294,9 +302,25 @@ coinText.onUpdate(() => {
   // ---------------------
   // Player
   // ---------------------
-  player.pos = k.vec2(WORLD_WIDTH / 2 - 800, WORLD_HEIGHT / 2 - 120);
-  player.scale = k.vec2(2);
-  k.add(player);
+  const spawnPos = getRandomOutsideSpawn(k);
+
+console.log(
+  "🌍 OUTSIDE SPAWN →",
+  spawnPos.x.toFixed(0),
+  spawnPos.y.toFixed(0)
+);
+
+player.pos = spawnPos;
+player.scale = k.vec2(2);
+k.add(player);
+
+// Tell server where we spawned
+socket.emit("player:sceneChange", {
+  scene: "outside",
+  x: spawnPos.x,
+  y: spawnPos.y,
+});
+
   if (player.bindShooting) player.bindShooting();
 
   if (player.setBounds) player.setBounds(null);
@@ -372,17 +396,17 @@ coinText.onUpdate(() => {
 const COIN_RESPAWN_TIME = 5000;
 const RESPAWN_RADIUS = 40;
 
-k.onCollide("car", "coin", (car, coin) => {
-  if (!car.driver) return;
+k.onCollide("player", "coin", (player, coin) => {
   if (leavingScene) return;
 
   const basePos = coin.pos.clone();
   coin.destroy();
 
+  // 💰 Give money
   store.set(moneyAtom, store.get(moneyAtom) + 1);
 
+  // ⏳ Respawn coin later
   const timerId = setTimeout(() => {
-    //  Do nothing if we already left
     if (leavingScene) return;
 
     const offset = k.vec2(

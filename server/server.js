@@ -12,7 +12,7 @@ const elevenlabs = new ElevenLabsClient({
 
 // Store players: { socketId: { name, pos } }
 const players = {};
-
+const readyPlayers = new Set();
 io.on("connection", (socket) => {
   console.log("A player connected:", socket.id);
 
@@ -29,6 +29,49 @@ io.on("connection", (socket) => {
     armor,
     isGhost,
   });
+});
+
+
+socket.on("player:ready", () => {
+  console.log("✅ Player ready:", socket.id);
+
+  readyPlayers.add(socket.id);
+
+  // Count players who are in HOME
+  const homePlayers = Object.values(players).filter(
+    (p) => p.scene === "home"
+  );
+
+  const totalPlayers = homePlayers.length;
+  const readyCount = readyPlayers.size;
+
+  // 🔁 Update everyone in home
+  io.emit("home:readyUpdate", {
+    readyCount,
+    totalPlayers,
+  });
+
+  // 🎮 ALL READY → START GAME
+  if (readyCount === totalPlayers && totalPlayers > 0) {
+    console.log("🚀 All players ready → starting game");
+
+    readyPlayers.clear();
+
+    for (const [id, player] of Object.entries(players)) {
+      if (player.scene !== "home") continue;
+
+      const spawn = {
+        x: Math.random() * 1600 + 100,
+        y: Math.random() * 900 + 100,
+      };
+
+      io.to(id).emit("home:gameStart", { pos: spawn });
+
+      // update server-side scene
+      player.scene = "outside";
+      player.pos = spawn;
+    }
+  }
 });
 
   // --- Handle chat messages ---

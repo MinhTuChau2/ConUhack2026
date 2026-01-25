@@ -450,6 +450,74 @@ healthFill.onUpdate(() => {
 });
 
 
+const readyButton = k.add([
+  k.rect(200, 60, { radius: 8 }),
+  k.pos(k.width() / 2, k.height() - 80), // ✅ VIEWPORT SPACE
+  k.anchor("center"),
+  k.color(k.rgb(60, 180, 60)),
+  k.area(),
+  k.fixed(),
+  k.z(9999),
+]);
+
+const readyText = k.add([
+  k.text("READY", { size: 24 }),
+  k.pos(k.width() / 2, k.height() - 80),
+  k.anchor("center"),
+  k.fixed(),
+  k.z(10000),
+]);
+
+let hasClickedReady = false;
+
+readyButton.onClick(() => {
+  if (hasClickedReady) {
+    console.log("⚠️ READY already clicked, ignoring");
+    return;
+  }
+
+  hasClickedReady = true;
+  readyButton.color = k.rgb(120, 120, 120);
+  readyText.text = "WAITING...";
+
+  console.log("🟢 CLIENT: READY clicked → emitting player:ready");
+  socket.emit("player:ready");
+});
+
+
+// Show ready count dynamically
+const readyCounterText = k.add([
+  k.text("0/0 ready", { size: 20 }),
+  k.pos(k.width() / 2, k.height() - 120),
+  k.anchor("center"),
+  k.fixed(),
+  k.z(10000),
+]);
+
+socket.on("home:readyUpdate", ({ readyCount, totalPlayers }) => {
+  console.log(
+    `📡 CLIENT: home:readyUpdate received → ${readyCount}/${totalPlayers}`
+  );
+
+  readyCounterText.text = `${readyCount}/${totalPlayers} ready`;
+});
+
+
+// When all ready → teleport outside
+socket.on("home:gameStart", ({ pos }) => {
+  console.log("🚀 CLIENT: home:gameStart received", pos);
+
+  player.pos = k.vec2(pos.x, pos.y);
+  player.scene = "outside";
+
+  hasClickedReady = false;
+  readyButton.color = k.rgb(60, 180, 60);
+  readyText.text = "READY";
+
+  k.go("outside");
+});
+
+
 
 
 const onPlayerJoined = ({ id, pos, scene }) => {
@@ -503,6 +571,19 @@ socket.on("player:leftOutside", onPlayerLeft);
       background.scale = k.vec2(scaleX, scaleY);
     }
   });
+const OUTSIDE_SPAWN_BOUNDS = {
+  minX: 200,
+  maxX: 1700,
+  minY: 200,
+  maxY: 900,
+};
+
+function getRandomOutsideSpawn(k) {
+  return k.vec2(
+    k.rand(OUTSIDE_SPAWN_BOUNDS.minX, OUTSIDE_SPAWN_BOUNDS.maxX),
+    k.rand(OUTSIDE_SPAWN_BOUNDS.minY, OUTSIDE_SPAWN_BOUNDS.maxY)
+  );
+}
 
  // --- SECTIONS AS PNG OBSTACLES WITH INTERACTION ---
 const sections = [
@@ -597,19 +678,57 @@ sections.forEach((s) => {
   console.log("Closet opened — choose an outfit");
 }
 else if (s.name === "ExitDoor") {
-   if (!player.isLocal) return;
-   
-  console.log("🚪 Leaving home → outside");
-  clearRemotePlayers();
+  if (!player.isLocal) return;
+
+  // 🔄 REVIVE PLAYER (UNGHOST)
+  player.isGhost = false;
+  player.health = player.maxHealth;
+  //player.armor = player.maxArmor ?? 0;
+
+  player.opacity = 1;
+
+  // Re-enable collisions
+  if (player.area) player.area.solid = true;
+
+  // Restore bow
+  if (player.bow) player.bow.hidden = false;
+
+  // Restore outfit visibility
+  if (player.outfit) player.outfit.opacity = 1;
+
+  // Reset ghost safety flags
+  player.locked = false;
+  player.inCloset = false;
+  player.unlocking = false;
+
+  // 🧠 Reset round flag (important)
+  window.__roundEnded = false;
+
+  const spawnPos = getRandomOutsideSpawn(k);
+
+  console.log(
+    "🚪 ExitDoor → revived & teleporting to outside at",
+    spawnPos.x.toFixed(0),
+    spawnPos.y.toFixed(0)
+  );
+
+  // Update local player state
+  player.currentScene = "outside";
+  player.pos = spawnPos;
+
+  // 🔊 Sync with server
   socket.emit("player:sceneChange", {
     scene: "outside",
-    x: 200,      // spawn position outside
-    y: 200,
+    x: spawnPos.x,
+    y: spawnPos.y,
+    revived: true,
   });
-  
-  resetPlayerState(player); // <-- RESET EVERYTHING
-  k.go("outside");
+
+  // Go to outside scene
+  k.go("outside", spawnPos);
 }
+
+
 
 
 

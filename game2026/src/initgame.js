@@ -10,6 +10,7 @@ import OutsideScene from "./assets/scenes/OutsideScene";
 //import startMentalDecay from "./systems/mentalDecay";
 import { socket } from "./assets/network/network.js";
 import makeHealth from "./assets/systems/Health";
+import makeRound from "./assets/systems/Round.js";
 //import makeHealthBar from "./assets/ui/HealthBar";
 
 function showChatBubble(k, target, text) {
@@ -281,6 +282,7 @@ socket.on("chat:message", ({ id, name, message }) => {
     console.log("Player name received:", playerName);
     
     const player = makePlayer(k, k.vec2(960, 540), 700, true, otherPlayers);
+    
     currentPlayer = player;
    
  chatInput.addEventListener("keydown", (e) => {

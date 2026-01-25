@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 export const socket = io("http://155.138.146.185:3000");
-
+//export const socket = io("http://localhost:3000");
 socket.on("connect", () => {
   console.log("Connected to server:", socket.id);
 });

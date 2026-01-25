@@ -37,6 +37,7 @@ export default function makePlayer(k, posVec2, speed,  isLocal = true, otherPlay
       maxHealth: 100,
       armor: 0,        // durability left
       maxArmor: 100,
+      
      
     },
   ]);
@@ -209,14 +210,14 @@ player.shootingBound = false;
     const id = outfitId ?? "none";
     store.set(outfitAtom, id);
     player.currentOutfitId = id;
-
+    player.hidden = false;
     if (player.outfit) {
       player.outfit.destroy();
       player.outfit = null;
     }
 
     if (id === "none") return;
-   if (player.inCar) player.hidden = false;
+   //if (player.inCar) player.hidden = false;
     player.outfit = player.add([
       k.sprite(id, { anim: `${player.directionName}-idle` }),
       k.anchor("center"),
@@ -259,13 +260,14 @@ player.shootingBound = false;
   // ---------------------
   player.bindShooting = () => {
     if (!player.isLocal) return;
-    if (player.shootingBound) return; // 🔒 prevent re-binding
+    //if (player.shootingBound) return; // 🔒 prevent re-binding
   player.shootingBound = true;
 
     const SHOT_COOLDOWN = 1 / 3;
     let lastShotTime = -Infinity;
 
     k.onKeyPress("space", () => {
+      
   // ✅ Don't shoot if player is a ghost
   if (player.isGhost) {
     console.log("[SHOOT] blocked: player is a ghost");
@@ -273,14 +275,15 @@ player.shootingBound = false;
   }
 
   // Don't shoot if in closet, locked, or hidden
-  if (player.inCloset || player.locked || player.hidden) {
+  if (player.inCloset || player.locked || player.isGhost) {
     console.log("[SHOOT] blocked", {
       inCloset: player.inCloset,
       locked: player.locked,
-      hidden: player.hidden,
+      isGhost: player.isGhost,
     });
     return;
   }
+  
 
   const now = k.time();
   if (now - lastShotTime < SHOT_COOLDOWN) return;
@@ -288,7 +291,7 @@ player.shootingBound = false;
 
   // Calculate spawn position in front of the player
   const aim = player.lastFacingDir.unit();
-  const BOW_DISTANCE =33; // distance in front of player
+  const BOW_DISTANCE =45; // distance in front of player
   const spawnPos = player.pos.add(aim.scale(BOW_DISTANCE));
 
   socket.emit("player:shoot", {
@@ -343,7 +346,7 @@ player.bow = player.add([
     k.z(5),
 ]);
 
-const BOW_DISTANCE = 20; // distance in front of player
+const BOW_DISTANCE = 22; // distance in front of player
 
 player.onUpdate(() => {
     if (!player.bow) return;
