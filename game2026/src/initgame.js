@@ -83,7 +83,16 @@ function showChatBubble(k, target, text) {
   target.chatBubble = { bg, label, tail };
 }
 
-
+// Text-to-speech audio for chat
+socket.on("chat:audio", ({ id, audio }) => {
+  const audioSrc = `data:audio/mp3;base64,${audio}`;
+  const sound = new Audio(audioSrc);
+  
+  // Play the AI voice
+  sound.play().catch(err => {
+    console.warn("Audio blocked by browser. Click the game window first.");
+  });
+});
 
 
 let currentPlayer = null;
