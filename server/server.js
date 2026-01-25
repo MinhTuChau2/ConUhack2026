@@ -33,9 +33,9 @@ io.on("connection", (socket) => {
     try {
       // 2. Start generating Rachel's voice
       const audioStream = await elevenlabs.generate({
-        voice: "Spuds Oxley",
+        voice: "NOpBlnGInO9m6vDvFkFC",
         text: data.message,
-        model_id: "NOpBlnGInO9m6vDvFkFC"
+        model_id: "eleven_monolingual_v1"
       });
 
       // 3. Convert the audio stream into a Base64 string
